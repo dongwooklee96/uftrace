@@ -170,8 +170,8 @@ static int add_graph_exit(struct uftrace_task_graph *tg)
 	}
 
 out:
-	node->time += fstack->total_time;
-	node->child_time += fstack->child_time;
+	node->total_time.sum += fstack->total_time;
+	node->self_time.sum += fstack->child_time;
 
 	if (exit_cb)
 		exit_cb(tg, cb_arg);

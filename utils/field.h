@@ -29,6 +29,7 @@ enum display_field_id {
 	REPLAY_F_MODULE,
 
 	GRAPH_F_TOTAL_TIME = 0,
+	GRAPH_F_TOTAL_AVG,
 	GRAPH_F_SELF_TIME,
 	GRAPH_F_ADDR,
 
