@@ -820,23 +820,23 @@ static struct tui_graph *tui_graph_init(struct uftrace_opts *opts)
 		top = &graph->ug.root;
 		top->name = basename(graph->ug.sess->exename);
 		top->nr_calls = 1;
+        /*top->total_time.min = 0;*/
+        /*top->total_time.max = 0;*/
 
 		list_for_each_entry(node, &graph->ug.root.head, list) {
 			top->total_time.sum += node->total_time.sum;
 			top->self_time.sum += node->self_time.sum;
-
-            if (top->total_time.min > node->total_time.sum)
-                top->total_time.min = node->total_time.sum;
-            if (top->total_time.max < node->total_time.sum)
-                top->total_time.max = node->total_time.max;
-
-            if (top->self_time.min > node->self_time.sum)
-                top->self_time.min = node->self_time.sum;
-            if (top->self_time.max < node->self_time.sum)
-                top->self_time.max = node->self_time.max;
+            /*if (top->total_time.min > node->total_time.min)*/
+                /*top->total_time.min = node->total_time.min;*/
+            /*if (top->total_time.max < node->total_time.max)*/
+                /*top->total_time.max = node->total_time.max;*/
+            /*if (top->self_time.min > node->self_time.min)*/
+                /*top->self_time.min = node->self_time.min;*/
+            /*if (top->self_time.max < node->self_time.max)*/
+                /*top->self_time.max = node->self_time.max;*/
 		}
-        top->total_time.avg = top->total_time.sum / top->nr_calls;
-        top->self_time.avg = top->self_time.sum / top->nr_calls;
+        /*top->total_time.avg = top->total_time.sum / top->nr_calls;*/
+        /*top->self_time.avg = top->self_time.sum / top->nr_calls;*/
 
 		tui_window_init(&graph->win, &graph_ops);
 
@@ -894,8 +894,8 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 	root->n.name = str;
 	root->n.parent = NULL;
 
-	root->n.total_time.sum = 0;
-	root->n.self_time.sum = 0;
+	/*root->n.total_time.sum = 0;*/
+	/*root->n.self_time.sum = 0;*/
 	root->n.nr_calls = 0;
 
 	/* special node */
