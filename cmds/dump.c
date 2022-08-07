@@ -1058,8 +1058,8 @@ static void adjust_fg_time(struct uftrace_task_graph *tg, void *arg)
 	 */
 	accounted_time = (curr_time / sample_time) * sample_time;
 
-	node->parent->child_time -= curr_time;
-	node->parent->child_time += accounted_time;
+	node->parent->self_time.sum -= curr_time;
+	node->parent->self_time.sum += accounted_time;
 }
 
 static void print_flame_graph(struct uftrace_dump_ops *ops, struct uftrace_graph_node *node,
@@ -1070,7 +1070,7 @@ static void print_flame_graph(struct uftrace_dump_ops *ops, struct uftrace_graph
 	unsigned long sample = node->nr_calls;
 
 	if (sample && flame->sample_time)
-		sample = (node->time - node->child_time) / flame->sample_time;
+		sample = (node->total_time.sum - node->self_time.sum) / flame->sample_time;
 
 	if (sample) {
 		struct uftrace_graph_node *parent = node;

@@ -252,7 +252,34 @@ static void print_graph_total(struct field_data *fd)
 	struct uftrace_graph_node *node = fd->arg;
 	uint64_t d;
 
-	d = node->time;
+	d = node->total_time.sum;
+
+	print_time(d);
+}
+
+static void print_graph_total_avg(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+	d = node->total_time.avg;
+
+	print_time(d);
+}
+
+static void print_graph_total_min(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+	d = node->total_time.min;
+
+	print_time(d);
+}
+
+static void print_graph_total_max(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+	d = node->total_time.max;
 
 	print_time(d);
 }
@@ -262,7 +289,37 @@ static void print_graph_self(struct field_data *fd)
 	struct uftrace_graph_node *node = fd->arg;
 	uint64_t d;
 
-	d = node->time - node->child_time;
+	d = node->total_time.sum - node->self_time.sum;
+
+	print_time(d);
+}
+
+static void print_graph_self_avg(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+
+	d = node->total_time.avg - node->self_time.avg;
+
+	print_time(d);
+}
+
+static void print_graph_self_min(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+
+	d = node->total_time.min - node->self_time.min;
+
+	print_time(d);
+}
+
+static void print_graph_self_max(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+
+	d = node->total_time.max - node->self_time.max;
 
 	print_time(d);
 }
@@ -287,6 +344,36 @@ static struct display_field graph_field_total = {
 	.list = LIST_HEAD_INIT(graph_field_total.list),
 };
 
+static struct display_field graph_field_total_avg = {
+	.id = GRAPH_F_TOTAL_AVG,
+	.name = "total-avg",
+    .alias = "tot-avg",
+    .header = "TOTAL AVG",
+	.length = 10,
+	.print = print_graph_total_avg,
+	.list = LIST_HEAD_INIT(graph_field_total_avg.list),
+};
+
+static struct display_field graph_field_total_min = {
+	.id = GRAPH_F_TOTAL_MIN,
+	.name = "total-min",
+    .alias = "tot-min",
+    .header = "TOTAL MIN",
+	.length = 10,
+	.print = print_graph_total_min,
+	.list = LIST_HEAD_INIT(graph_field_total_min.list),
+};
+
+static struct display_field graph_field_total_max = {
+	.id = GRAPH_F_TOTAL_MAX,
+	.name = "total-max",
+    .alias = "tot-max",
+    .header = "TOTAL MAX",
+	.length = 10,
+	.print = print_graph_total_max,
+	.list = LIST_HEAD_INIT(graph_field_total_max.list),
+};
+
 static struct display_field graph_field_self = {
 	.id = GRAPH_F_SELF_TIME,
 	.name = "self-time",
@@ -295,6 +382,36 @@ static struct display_field graph_field_self = {
 	.length = 10,
 	.print = print_graph_self,
 	.list = LIST_HEAD_INIT(graph_field_self.list),
+};
+
+static struct display_field graph_field_self_avg = {
+	.id = GRAPH_F_SELF_AVG,
+	.name = "self-avg",
+	.alias = "self-avg",
+	.header = " SELF AVG",
+	.length = 10,
+	.print = print_graph_self_avg,
+	.list = LIST_HEAD_INIT(graph_field_self_avg.list),
+};
+
+static struct display_field graph_field_self_min = {
+	.id = GRAPH_F_SELF_MIN,
+	.name = "self-min",
+	.alias = "self-min",
+	.header = " SELF MIN",
+	.length = 10,
+	.print = print_graph_self_min,
+	.list = LIST_HEAD_INIT(graph_field_self_min.list),
+};
+
+static struct display_field graph_field_self_max = {
+	.id = GRAPH_F_SELF_MAX,
+	.name = "self-max",
+	.alias = "self-max",
+	.header = " SELF MAX",
+	.length = 10,
+	.print = print_graph_self_max,
+	.list = LIST_HEAD_INIT(graph_field_self_max.list),
 };
 
 static struct display_field graph_field_addr = {
@@ -315,7 +432,13 @@ static struct display_field graph_field_addr = {
 /* index of this table should be matched to display_field_id */
 static struct display_field *graph_field_table[] = {
 	&graph_field_total,
+    &graph_field_total_avg,
+    &graph_field_total_min,
+    &graph_field_total_max,
 	&graph_field_self,
+    &graph_field_self_avg,
+    &graph_field_self_min,
+    &graph_field_self_max,
 	&graph_field_addr,
 };
 
@@ -650,8 +773,8 @@ static void copy_graph_node(struct uftrace_graph_node *dst, struct uftrace_graph
 		}
 
 		node->n.addr = child->addr;
-		node->n.time += child->time;
-		node->n.child_time += child->child_time;
+		node->n.total_time.sum += child->total_time.sum;
+		node->n.self_time.sum += child->self_time.sum;
 		node->n.nr_calls += child->nr_calls;
 
 		copy_graph_node(&node->n, child);
@@ -697,11 +820,24 @@ static struct tui_graph *tui_graph_init(struct uftrace_opts *opts)
 		top = &graph->ug.root;
 		top->name = basename(graph->ug.sess->exename);
 		top->nr_calls = 1;
+        top->total_time.min = -1ULL;
 
 		list_for_each_entry(node, &graph->ug.root.head, list) {
-			top->time += node->time;
-			top->child_time += node->time;
-		}
+			top->total_time.sum += node->total_time.sum;
+			top->self_time.sum += node->self_time.sum;
+
+            if (top->total_time.min > node->total_time.min)
+                top->total_time.min = node->total_time.min;
+            if (top->total_time.max < node->total_time.max)
+                top->total_time.max = node->total_time.max;
+            if (top->self_time.min > node->self_time.min)
+                top->self_time.min = node->self_time.min;
+            if (top->self_time.max < node->self_time.max)
+                top->self_time.max = node->self_time.max;
+        }
+
+        top->total_time.avg = top->total_time.sum / top->nr_calls;
+        top->self_time.avg = top->self_time.sum / top->nr_calls;
 
 		tui_window_init(&graph->win, &graph_ops);
 
@@ -759,8 +895,8 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 	root->n.name = str;
 	root->n.parent = NULL;
 
-	root->n.time = 0;
-	root->n.child_time = 0;
+	/*root->n.total_time.sum = 0;*/
+	/*root->n.self_time.sum = 0;*/
 	root->n.nr_calls = 0;
 
 	/* special node */
@@ -780,8 +916,8 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 			tmp = append_graph_node(&tmp->n, target, parent->n.name);
 
 			tmp->n.addr = parent->n.addr;
-			tmp->n.time = node->n.time;
-			tmp->n.child_time = node->n.child_time;
+			tmp->n.total_time.sum = node->n.total_time.sum;
+			tmp->n.self_time.sum= node->n.self_time.sum;
 			tmp->n.nr_calls = node->n.nr_calls;
 
 			/* fold backtrace at the first child */
@@ -806,8 +942,8 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 			continue;
 
 		root->n.addr = node->n.addr;
-		root->n.time += node->n.time;
-		root->n.child_time += node->n.child_time;
+		root->n.total_time.sum += node->n.total_time.sum;
+		root->n.self_time.sum+= node->n.self_time.sum;
 		root->n.nr_calls += node->n.nr_calls;
 
 		copy_graph_node(&root->n, &node->n);
@@ -1315,8 +1451,8 @@ static bool win_longest_child_graph(struct tui_window *win, void *node)
 
 	list_for_each_entry(child, &curr->n.head, n.list) {
 		fold_graph_node(child, true, false, 0);
-		if (longest_child_time < child->n.time) {
-			longest_child_time = child->n.time;
+		if (longest_child_time < child->n.total_time.sum) {
+			longest_child_time = child->n.total_time.sum;
 			longest_child = child;
 		}
 	}

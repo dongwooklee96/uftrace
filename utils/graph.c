@@ -10,6 +10,19 @@ static void *cb_arg;
 
 static struct rb_root task_graph_root = RB_ROOT;
 
+static void init_time_stat(struct graph_time_stat *ts)
+{
+    ts->min = -1ULL;
+}
+
+static void update_time_stat(struct graph_time_stat *ts, uint64_t time_ns)
+{
+    if (ts->min > time_ns)
+        ts->min = time_ns;
+    if (ts->max < time_ns)
+        ts->max = time_ns;
+}
+
 void graph_init(struct uftrace_graph *graph, struct uftrace_session *s)
 {
 	memset(graph, 0, sizeof(*graph));
@@ -98,6 +111,9 @@ static int add_graph_entry(struct uftrace_task_graph *tg, char *name, size_t nod
 		node->loc = loc;
 
 		if (sess && uftrace_match_filter(fstack->addr, &sess->fixups, &tr)) {
+
+        init_time_stat(&node->total_time);
+        init_time_stat(&node->self_time);
 			struct uftrace_symbol *sym;
 			struct uftrace_special_node *snode;
 			enum uftrace_graph_node_type type = NODE_T_NORMAL;
@@ -170,8 +186,14 @@ static int add_graph_exit(struct uftrace_task_graph *tg)
 	}
 
 out:
-	node->time += fstack->total_time;
-	node->child_time += fstack->child_time;
+    node->total_time.sum += fstack->total_time;
+    node->self_time.sum += fstack->child_time;
+
+    update_time_stat(&node->total_time, fstack->total_time);
+    update_time_stat(&node->self_time, fstack->child_time);
+
+    node->total_time.avg = (node->total_time.sum) / node->nr_calls;
+    node->self_time.avg = (node->self_time.sum) / node->nr_calls;
 
 	if (exit_cb)
 		exit_cb(tg, cb_arg);
