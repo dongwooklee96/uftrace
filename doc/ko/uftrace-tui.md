@@ -23,7 +23,8 @@ TUI 옵션
 =========
 -f *FIELD*, \--output-fields=*FIELD*
 :   출력 필드를 사용자 지정으로 설정한다. 이 옵션은 기본적으로 graph 필드를 나타낸다.
-    설정 가능한 값은 total, self, addr 이고, 기본 설정값은 `total`이다.
+    설정 가능한 값은 total, total-avg, total-min, total-max, self, self-avg, self-min,
+    self-max, addr 이고, 기본 설정값은 `total`이다.
     그런데 이 옵션이 --report 옵션과 함께 사용된다면, 이 옵션은 report 필드를 나타낸다.
     설정 가능한 값은 total, total-avg, total-min, total-max, self, self-avg, self-min,
     self-max, call, size 이고, 기본 설정값은 'total,self,call'이다.
