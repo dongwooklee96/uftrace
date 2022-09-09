@@ -55,7 +55,7 @@ static void print_self_time(struct field_data *fd)
 	struct uftrace_graph_node *node = fd->arg;
 	uint64_t d;
 
-	d = node->total_time.sum - node->child_time;
+	d = node->self_time.sum;
 
 	print_time_unit(d);
 }
@@ -697,7 +697,6 @@ static void build_graph(struct uftrace_opts *opts, struct uftrace_data *handle, 
 
 		list_for_each_entry(node, &graph->ug.root.head, list) {
 			graph->ug.root.total_time.sum += node->total_time.sum;
-			graph->ug.root.child_time += node->total_time.sum;
 		}
 
 		graph = graph->next;

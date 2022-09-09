@@ -173,7 +173,7 @@ static int add_graph_exit(struct uftrace_task_graph *tg)
 
 out:
 	node->total_time.sum += fstack->total_time;
-	node->child_time += fstack->child_time;
+	node->self_time.sum += fstack->total_time - fstack->child_time;
 
 	if (exit_cb)
 		exit_cb(tg, cb_arg);
@@ -387,7 +387,6 @@ TEST_CASE(graph_basic)
 	TEST_NE(node, NULL);
 	TEST_STREQ(node->name, data[1].name);
 	TEST_EQ(node->total_time.sum, data[1].total_time);
-	TEST_EQ(node->child_time, data[1].child_time);
 	TEST_EQ(node->nr_calls, 1);
 
 	pr_dbg("check graph node: bar\n");
@@ -395,7 +394,6 @@ TEST_CASE(graph_basic)
 	TEST_NE(node, NULL);
 	TEST_STREQ(node->name, data[5].name);
 	TEST_EQ(node->total_time.sum, data[5].total_time);
-	TEST_EQ(node->child_time, data[5].child_time);
 	TEST_EQ(node->nr_calls, 1);
 
 	pr_dbg("check graph node: baz\n");
@@ -403,7 +401,6 @@ TEST_CASE(graph_basic)
 	TEST_NE(node, NULL);
 	TEST_STREQ(node->name, data[4].name);
 	TEST_EQ(node->total_time.sum, data[4].total_time);
-	TEST_EQ(node->child_time, data[4].child_time);
 	TEST_EQ(node->nr_calls, 1);
 
 	pr_dbg("destroy graph and data\n");

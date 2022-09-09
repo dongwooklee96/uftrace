@@ -20,8 +20,8 @@ struct uftrace_graph_node {
 	char *name;
 	int nr_edges;
 	int nr_calls;
-	uint64_t child_time;
 	struct graph_time_stat total_time;
+	struct graph_time_stat self_time;
 	uint32_t id;
 	struct list_head head;
 	struct list_head list;

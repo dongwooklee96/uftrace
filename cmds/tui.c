@@ -276,7 +276,7 @@ static void print_graph_self(struct field_data *fd)
 	struct uftrace_graph_node *node = fd->arg;
 	uint64_t d;
 
-	d = node->total_time.sum - node->child_time;
+	d = node->self_time.sum;
 
 	print_time(d);
 }
@@ -688,7 +688,6 @@ static void copy_graph_node(struct uftrace_graph_node *dst, struct uftrace_graph
 
 		node->n.addr = child->addr;
 		node->n.total_time.sum += child->total_time.sum;
-		node->n.child_time += child->child_time;
 		node->n.nr_calls += child->nr_calls;
 
 		copy_graph_node(&node->n, child);
@@ -737,7 +736,6 @@ static struct tui_graph *tui_graph_init(struct uftrace_opts *opts)
 
 		list_for_each_entry(node, &graph->ug.root.head, list) {
 			top->total_time.sum += node->total_time.sum;
-			top->child_time += node->total_time.sum;
 		}
 
 		tui_window_init(&graph->win, &graph_ops);
@@ -797,7 +795,6 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 	root->n.parent = NULL;
 
 	root->n.total_time.sum = 0;
-	root->n.child_time = 0;
 	root->n.nr_calls = 0;
 
 	/* special node */
@@ -818,7 +815,6 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 
 			tmp->n.addr = parent->n.addr;
 			tmp->n.total_time.sum = node->n.total_time.sum;
-			tmp->n.child_time = node->n.child_time;
 			tmp->n.nr_calls = node->n.nr_calls;
 
 			/* fold backtrace at the first child */
@@ -844,7 +840,6 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 
 		root->n.addr = node->n.addr;
 		root->n.total_time.sum += node->n.total_time.sum;
-		root->n.child_time += node->n.child_time;
 		root->n.nr_calls += node->n.nr_calls;
 
 		copy_graph_node(&root->n, &node->n);

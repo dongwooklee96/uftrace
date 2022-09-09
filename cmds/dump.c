@@ -1029,11 +1029,7 @@ static void adjust_fg_time(struct uftrace_task_graph *tg, void *arg)
 {
 	struct uftrace_dump_ops *ops = arg;
 	struct uftrace_flame_dump *flame = container_of(ops, typeof(*flame), ops);
-	struct uftrace_graph_node *node = tg->node;
 	struct uftrace_fstack *fstack;
-	uint64_t curr_time;
-	uint64_t sample_time;
-	uint64_t accounted_time;
 
 	if (flame->sample_time == 0)
 		return;
@@ -1044,35 +1040,6 @@ static void adjust_fg_time(struct uftrace_task_graph *tg, void *arg)
 	fstack = fstack_get(tg->task, tg->task->stack_count);
 	if (fstack == NULL)
 		return;
-
-	curr_time = fstack->total_time;
-	sample_time = flame->sample_time;
-
-	/*
-	 * it needs to track the child time separately
-	 * since child time not accounted due to sample time
-	 * should be accounted to parent.
-	 *
-	 * For example, with 1us sample time:
-	 *
-	 * # DURATION    TID     FUNCTION
-	 *             [12345] | main() {
-	 *    4.789 us [12345] |   foo();
-	 *    4.987 us [12345] |   bar();
-	 *   10.567 us [12345] | } // main
-	 *
-	 * In this case, main's total time is more than 10us
-	 * so 10 samples should be shown, but after accounting
-	 * foo and bar (4 samples each), its time would be
-	 * 10.567 - 4.789 - 4.987 = 0.791 so no samples for main.
-	 * But it actually needs to get 2 samples.
-	 *
-	 * So add the accounted child time only, not real time.
-	 */
-	accounted_time = (curr_time / sample_time) * sample_time;
-
-	node->parent->child_time -= curr_time;
-	node->parent->child_time += accounted_time;
 }
 
 static void print_flame_graph(struct uftrace_dump_ops *ops, struct uftrace_graph_node *node,
@@ -1083,7 +1050,7 @@ static void print_flame_graph(struct uftrace_dump_ops *ops, struct uftrace_graph
 	unsigned long sample = node->nr_calls;
 
 	if (sample && flame->sample_time)
-		sample = (node->total_time.sum - node->child_time) / flame->sample_time;
+		sample = (node->self_time.sum) / flame->sample_time;
 
 	if (sample) {
 		struct uftrace_graph_node *parent = node;
