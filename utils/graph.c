@@ -10,6 +10,23 @@ static void *cb_arg;
 
 static struct rb_root task_graph_root = RB_ROOT;
 
+void graph_init_time_stat(struct graph_time_stat *ts)
+{
+	ts->sum = 0;
+	ts->min = -1ULL;
+	ts->max = 0;
+}
+
+void graph_update_time_stat(struct graph_time_stat *ts, uint64_t time_ns)
+{
+	ts->sum += time_ns;
+
+	if (ts->min > time_ns)
+		ts->min = time_ns;
+	if (ts->max < time_ns)
+		ts->max = time_ns;
+}
+
 void graph_init(struct uftrace_graph *graph, struct uftrace_session *s)
 {
 	memset(graph, 0, sizeof(*graph));
@@ -99,6 +116,9 @@ static int add_graph_entry(struct uftrace_task_graph *tg, char *name, size_t nod
 
 		node->loc = loc;
 
+		graph_init_time_stat(&node->total_time);
+		graph_init_time_stat(&node->self_time);
+
 		if (sess && uftrace_match_filter(fstack->addr, &sess->fixups, &tr)) {
 			struct uftrace_symbol *sym;
 			struct uftrace_special_node *snode;
@@ -172,8 +192,8 @@ static int add_graph_exit(struct uftrace_task_graph *tg)
 	}
 
 out:
-	node->time += fstack->total_time;
-	node->child_time += fstack->child_time;
+	graph_update_time_stat(&node->total_time, fstack->total_time);
+	graph_update_time_stat(&node->self_time, fstack->total_time - fstack->child_time);
 
 	if (exit_cb)
 		exit_cb(tg, cb_arg);
@@ -386,7 +406,7 @@ TEST_CASE(graph_basic)
 	node = graph_find_node(&graph.root, data[1].addr);
 	TEST_NE(node, NULL);
 	TEST_STREQ(node->name, data[1].name);
-	TEST_EQ(node->time, data[1].total_time);
+	TEST_EQ(node->total_time.sum, data[1].total_time);
 	TEST_EQ(node->child_time, data[1].child_time);
 	TEST_EQ(node->nr_calls, 1);
 
@@ -394,7 +414,7 @@ TEST_CASE(graph_basic)
 	node = graph_find_node(&graph.root, data[5].addr);
 	TEST_NE(node, NULL);
 	TEST_STREQ(node->name, data[5].name);
-	TEST_EQ(node->time, data[5].total_time);
+	TEST_EQ(node->total_time.sum, data[5].total_time);
 	TEST_EQ(node->child_time, data[5].child_time);
 	TEST_EQ(node->nr_calls, 1);
 
@@ -402,7 +422,7 @@ TEST_CASE(graph_basic)
 	node = graph_find_node(node, data[4].addr);
 	TEST_NE(node, NULL);
 	TEST_STREQ(node->name, data[4].name);
-	TEST_EQ(node->time, data[4].total_time);
+	TEST_EQ(node->total_time.sum, data[4].total_time);
 	TEST_EQ(node->child_time, data[4].child_time);
 	TEST_EQ(node->nr_calls, 1);
 
