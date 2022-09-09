@@ -9,13 +9,19 @@
 #include "utils/list.h"
 #include "utils/rbtree.h"
 
+struct graph_time_stat {
+	uint64_t sum;
+	uint64_t min;
+	uint64_t max;
+};
+
 struct uftrace_graph_node {
 	uint64_t addr;
 	char *name;
 	int nr_edges;
 	int nr_calls;
-	uint64_t time;
 	uint64_t child_time;
+	struct graph_time_stat total_time;
 	uint32_t id;
 	struct list_head head;
 	struct list_head list;
