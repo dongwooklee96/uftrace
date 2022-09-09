@@ -174,10 +174,11 @@ static const char *help[] = {
 	"q             Quit",
 };
 
-#define NUM_GRAPH_FIELD 6
+#define NUM_GRAPH_FIELD 9
 
 static const char *graph_field_names[NUM_GRAPH_FIELD] = {
-	"TOTAL TIME", "TOTAL AVG", "TOTAL MIN", "TOTAL MAX", "SELF TIME", "ADDRESS",
+	"TOTAL TIME", "TOTAL AVG", "TOTAL MIN", "TOTAL MAX", "SELF TIME",
+	"SELF AVG",   "SELF MIN",  "SELF MAX",	"ADDRESS",
 };
 
 #define NUM_REPORT_FIELD 10
@@ -310,6 +311,37 @@ static void print_graph_self(struct field_data *fd)
 	print_time(d);
 }
 
+static void print_graph_self_avg(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+
+	ASSERT(node->nr_calls != 0);
+	d = node->self_time.sum / node->nr_calls;
+
+	print_time(d);
+}
+
+static void print_graph_self_min(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+
+	d = node->self_time.min;
+
+	print_time(d);
+}
+
+static void print_graph_self_max(struct field_data *fd)
+{
+	struct uftrace_graph_node *node = fd->arg;
+	uint64_t d;
+
+	d = node->self_time.max;
+
+	print_time(d);
+}
+
 static void print_graph_addr(struct field_data *fd)
 {
 	struct uftrace_graph_node *node = fd->arg;
@@ -370,6 +402,36 @@ static struct display_field graph_field_self = {
 	.list = LIST_HEAD_INIT(graph_field_self.list),
 };
 
+static struct display_field graph_field_self_avg = {
+	.id = GRAPH_F_SELF_AVG,
+	.name = "self-avg",
+	.alias = "savg",
+	.header = " SELF AVG",
+	.length = 10,
+	.print = print_graph_self_avg,
+	.list = LIST_HEAD_INIT(graph_field_self_avg.list),
+};
+
+static struct display_field graph_field_self_min = {
+	.id = GRAPH_F_SELF_MIN,
+	.name = "self-min",
+	.alias = "smin",
+	.header = " SELF MIN",
+	.length = 10,
+	.print = print_graph_self_min,
+	.list = LIST_HEAD_INIT(graph_field_self_min.list),
+};
+
+static struct display_field graph_field_self_max = {
+	.id = GRAPH_F_SELF_MAX,
+	.name = "self-max",
+	.alias = "smax",
+	.header = " SELF MAX",
+	.length = 10,
+	.print = print_graph_self_max,
+	.list = LIST_HEAD_INIT(graph_field_self_max.list),
+};
+
 static struct display_field graph_field_addr = {
 	.id = GRAPH_F_ADDR,
 	.name = "address",
@@ -388,7 +450,8 @@ static struct display_field graph_field_addr = {
 /* index of this table should be matched to display_field_id */
 static struct display_field *graph_field_table[] = {
 	&graph_field_total,	&graph_field_total_avg, &graph_field_total_min,
-	&graph_field_total_max, &graph_field_self,	&graph_field_addr,
+	&graph_field_total_max, &graph_field_self,	&graph_field_self_avg,
+	&graph_field_self_min,	&graph_field_self_max,	&graph_field_addr,
 };
 
 /* clang-format off */
@@ -796,6 +859,7 @@ static struct tui_graph *tui_graph_init(struct uftrace_opts *opts)
 			ASSERT(node->nr_calls == 1);
 
 			graph_update_time_stat(&top->total_time, node->total_time.sum);
+			graph_update_time_stat(&top->self_time, node->self_time.sum);
 		}
 
 		tui_window_init(&graph->win, &graph_ops);
@@ -855,6 +919,8 @@ static void build_partial_graph(struct tui_report_node *root_node, struct tui_gr
 	root->n.parent = NULL;
 
 	graph_init_time_stat(&root->n.total_time);
+	graph_init_time_stat(&root->n.self_time);
+
 	root->n.nr_calls = 0;
 
 	/* special node */
